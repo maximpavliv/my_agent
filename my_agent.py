@@ -33,20 +33,20 @@ def call(tools):        # now takes an arg
 
 def tool_call(item):    # just handles one tool
     result = ping(**json.loads(item.arguments))
-    return [ item, {
+    return {
         "type": "function_call_output",
         "call_id": item.call_id,
         "output": result
-    }]
+    }
 
 def handle_tools(tools, response):
-    if response.output[0].type == "reasoning":
-        context.append(response.output[0])
-    osz = len(context)
+    context.extend(response.output)
+    called_function = False
     for item in response.output:
         if item.type == "function_call":
-            context.extend(tool_call(item))
-    return len(context) != osz
+            context.append(tool_call(item))
+            called_function = True
+    return called_function
 
 def process(line):
     context.append({"role": "user", "content": line})
