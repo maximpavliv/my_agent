@@ -89,6 +89,44 @@ def ensure_container():
         print(start.stderr)
         raise RuntimeError("Docker start failed")
 
+def cleanup_container():
+    """Stop and remove the Docker container if it exists."""
+    # Check if container exists
+    check = subprocess.run(
+        ["docker", "ps", "-a", "--filter", f"name=^{CONTAINER_NAME}$", "--format", "{{.Names}}"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    if check.stdout.strip() != CONTAINER_NAME:
+        print(f"Container '{CONTAINER_NAME}' does not exist. Nothing to clean up.")
+        return
+
+    print(f"Cleaning up container '{CONTAINER_NAME}'...")
+
+    # Stop container (ignore errors if not running)
+    subprocess.run(
+        ["docker", "stop", CONTAINER_NAME],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    # Remove container
+    rm = subprocess.run(
+        ["docker", "rm", CONTAINER_NAME],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    if rm.returncode == 0:
+        print(f"Container '{CONTAINER_NAME}' removed.")
+    else:
+        print(f"Failed to remove container '{CONTAINER_NAME}':")
+        print(rm.stderr)
+        raise RuntimeError("Could not remove container")
+
 def ping(host=""):
     try:
         result = subprocess.run(
@@ -155,10 +193,13 @@ def process(line):
     return response.output_text
 
 def main():
-    while True:
-        line = input("> ")
-        result = process(line)
-        print(f">>> {result}\n")
+    try:
+        while True:
+            line = input("> ")
+            result = process(line)
+            print(f">>> {result}\n")
+    finally:
+        cleanup_container()
 
 if __name__ == "__main__":
     main()
