@@ -4,6 +4,7 @@ import json
 
 client = OpenAI()
 context = []
+CONTAINER_NAME = "my_agent_container"
 
 tools = [{
    "type": "function", "name": "ping",
@@ -15,7 +16,43 @@ tools = [{
             },
        },
        "required": ["host"],
+    },},
+   {
+   "type": "function", "name": "bash",
+   "description": "execute a bash command in a secure Docker container",
+   "parameters": {
+       "type": "object", "properties": {
+           "command": {
+             "type": "string", "description": "bash command to execute",
+            },
+       },
+       "required": ["command"],
     },},]
+
+def ensure_container():
+    """Ensure the Docker container exists and is running"""
+    # Check if container exists
+    check = subprocess.run(
+        ["docker", "ps", "-a", "--filter", f"name={CONTAINER_NAME}", "--format", "{{.Names}}"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    if CONTAINER_NAME not in check.stdout:
+        # Container doesn't exist, create it
+        subprocess.run(
+            ["docker", "run", "-d", "--name", CONTAINER_NAME, "my_agent_image"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+    else:
+        # Container exists, ensure it's running
+        subprocess.run(
+            ["docker", "start", CONTAINER_NAME],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
 
 def ping(host=""):
     try:
@@ -28,11 +65,36 @@ def ping(host=""):
     except Exception as e:
         return f"error: {e}"
 
-def call(tools):        # now takes an arg
+def bash(command=""):
+    try:
+        ensure_container()
+        result = subprocess.run(
+            ["docker", "exec", CONTAINER_NAME, "bash", "-c", command],
+            text=True,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE,
+            timeout=30
+        )
+        return result.stdout if result.stdout else result.stderr
+    except subprocess.TimeoutExpired:
+        return "error: command timed out after 30 seconds"
+    except Exception as e:
+        return f"error: {e}"
+
+def call(tools):
     return client.responses.create(model="gpt-5", tools=tools, input=context)
 
-def tool_call(item):    # just handles one tool
-    result = ping(**json.loads(item.arguments))
+def tool_call(item):
+    tool_name = item.name
+    args = json.loads(item.arguments)
+
+    if tool_name == "ping":
+        result = ping(**args)
+    elif tool_name == "bash":
+        result = bash(**args)
+    else:
+        result = f"error: unknown tool {tool_name}"
+
     return {
         "type": "function_call_output",
         "call_id": item.call_id,
