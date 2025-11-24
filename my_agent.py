@@ -154,9 +154,6 @@ def bash(command=""):
     except Exception as e:
         return f"error: {e}"
 
-def call(tools):
-    return client.responses.create(model="gpt-5", tools=tools, input=context)
-
 def tool_call(item):
     tool_name = item.name
     args = json.loads(item.arguments)
@@ -173,6 +170,9 @@ def tool_call(item):
         "call_id": item.call_id,
         "output": result
     }
+
+def call(tools):
+    return client.responses.create(model="gpt-5", tools=tools, input=context)
 
 def handle_tools(tools, response):
     context.extend(response.output)
