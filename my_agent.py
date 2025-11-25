@@ -20,12 +20,12 @@ tools = [{
        "required": ["host"],
     },},
    {
-   "type": "function", "name": "bash",
+   "type": "function", "name": "bash_in_container",
    "description": "execute a bash command in a secure Docker container",
    "parameters": {
        "type": "object", "properties": {
            "command": {
-             "type": "string", "description": "bash command to execute",
+             "type": "string", "description": "bash command to execute inside the container",
             },
        },
        "required": ["command"],
@@ -42,7 +42,7 @@ def ping(host=""):
     except Exception as e:
         return f"error: {e}"
 
-def bash(command=""):
+def bash_in_container(command=""):
     try:
         ensure_container()
         result = subprocess.run(
@@ -64,8 +64,8 @@ def tool_call(item):
 
     if tool_name == "ping":
         result = ping(**args)
-    elif tool_name == "bash":
-        result = bash(**args)
+    elif tool_name == "bash_in_container":
+        result = bash_in_container(**args)
     else:
         result = f"error: unknown tool {tool_name}"
 
