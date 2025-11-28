@@ -1,3 +1,6 @@
+import os
+import subprocess
+
 IMAGE_NAME = "my_agent_image"
 CONTAINER_NAME = "my_agent_container"
 

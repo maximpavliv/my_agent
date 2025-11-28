@@ -1,7 +1,6 @@
 from openai import OpenAI
 import subprocess
 import json
-import os
 
 from container_utils import ensure_container, cleanup_container, CONTAINER_NAME
 
