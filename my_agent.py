@@ -8,7 +8,7 @@ context = []
 def call(tools):
     return client.responses.create(model="gpt-5", tools=tools, input=context)
 
-def handle_tools(tools, response):
+def handle_tools(response):
     context.extend(response.output)
     called_function = False
     for item in response.output:
@@ -21,7 +21,7 @@ def process(line):
     context.append({"role": "user", "content": line})
     response = call(tools)
     # resolve tool calls
-    while handle_tools(tools, response):
+    while handle_tools(response):
         response = call(tools)
     context.append({"role": "assistant", "content": response.output_text})
     return response.output_text
